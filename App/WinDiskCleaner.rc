@@ -1,0 +1,69 @@
+// Resource script for WinDiskCleaner
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+#include "afxres.h"
+#include "verrsrc.h"
+#undef APSTUDIO_READONLY_SYMBOLS
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+IDR_MAINFRAME           ICON                    "res\\WinDiskCleaner.ico"
+
+IDD_CLEANER_DIALOG DIALOGEX 0, 0, 540, 292
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "Enterprise Disk Cleanup Utility"
+FONT 9, "Segoe UI", 400, 0, 0x0
+BEGIN
+    LTEXT           "Removes temporary files, caches and old logs to free disk space. Files that are in use, or were changed recently, are kept. Deleted files do not go to the Recycle Bin.",IDC_INTRO,7,7,526,18
+    LTEXT           "",IDC_ADMIN_STATUS,7,30,410,10,SS_ENDELLIPSIS
+    PUSHBUTTON      "Restart as &Administrator",IDC_RESTART_ADMIN,423,26,110,15
+    CONTROL         "",IDC_TARGETS,"SysListView32",LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,7,45,526,150
+    CONTROL         "Include &all user profiles",IDC_ALL_USERS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,200,180,10
+    CONTROL         "&Keep recently changed files (recommended)",IDC_MIN_AGE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,195,200,338,10
+    CONTROL         "",IDC_PROGRESS,"msctls_progress32",PBS_SMOOTH | WS_BORDER,7,216,526,10
+    LTEXT           "",IDC_PROGRESS_TEXT,7,229,526,10,SS_ENDELLIPSIS | SS_NOPREFIX
+    LTEXT           "",IDC_SUMMARY,7,243,526,20,SS_NOPREFIX
+    PUSHBUTTON      "A&nalyze",IDC_ANALYZE,7,271,60,15
+    DEFPUSHBUTTON   "&Clean Up",IDC_CLEAN,71,271,60,15
+    PUSHBUTTON      "&Stop",IDC_STOP,135,271,60,15
+    PUSHBUTTON      "Save &Report...",IDC_SAVE_REPORT,199,271,70,15
+    PUSHBUTTON      "Close",IDCANCEL,473,271,60,15
+END
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,0
+ PRODUCTVERSION 1,0,0,0
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS VS_FF_DEBUG
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "EnterpriseUtils"
+            VALUE "FileDescription", "Enterprise Disk Cleanup Utility"
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "WinDiskCleaner.exe"
+            VALUE "OriginalFilename", "WinDiskCleaner.exe"
+            VALUE "ProductName", "Enterprise Disk Cleanup Utility"
+            VALUE "ProductVersion", "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+// MFC framework resources (static link)
+#include "afxres.rc"

@@ -1,0 +1,106 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.configuration }} | ${{ matrix.platform }}
+    # windows-2022 ships Visual Studio 2022 with the v143 toolset and MFC.
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+        platform: [x64, x86]
+        include:
+          # The solution platform x86 builds the projects' Win32 platform, which is the folder name under bin\.
+          - platform: x64
+            outdir: x64
+          - platform: x86
+            outdir: Win32
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: microsoft/setup-msbuild@v3
+
+      - name: Build
+        run: msbuild WinDiskCleaner.sln -m -nologo -verbosity:minimal -p:Configuration=${{ matrix.configuration }} -p:Platform=${{ matrix.platform }}
+
+      # Deletion rules (age, extensions, exclusions, locked files, junctions, unsafe roots) in throw-away folders.
+      - name: Unit tests
+        shell: pwsh
+        run: |
+          $platformDir = '${{ matrix.outdir }}'
+          & "bin\$platformDir\${{ matrix.configuration }}\CleanerTests.exe"
+          if ($LASTEXITCODE -ne 0) { throw "CleanerTests failed with exit code $LASTEXITCODE" }
+
+      # Report-only runs, exit codes, single instance and the window. Nothing is deleted on the runner.
+      - name: Smoke test
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File Tests\SmokeTest.ps1 -Configuration ${{ matrix.configuration }} -Platform ${{ matrix.platform }}
+          if ($LASTEXITCODE -ne 0) { throw "SmokeTest.ps1 failed with exit code $LASTEXITCODE" }
+
+      - name: Upload binaries
+        if: matrix.configuration == 'Release'
+        uses: actions/upload-artifact@v7
+        with:
+          name: WinDiskCleaner-${{ matrix.platform }}-${{ matrix.configuration }}
+          path: |
+            bin/${{ matrix.outdir }}/${{ matrix.configuration }}/WinDiskCleaner.exe
+            bin/${{ matrix.outdir }}/${{ matrix.configuration }}/WinDiskCleaner.pdb
+          if-no-files-found: error
+
+  release:
+    name: Release
+    # Every push to main whose builds and tests all pass gets its own tag and GitHub release.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    # Pinned rather than ubuntu-latest so the image doesn't change under us (the job only needs zip and gh).
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      # Bump the major/minor here; the patch number is the workflow run number.
+      VERSION: v1.0.${{ github.run_number }}
+
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: WinDiskCleaner-*-Release
+          path: artifacts
+
+      # One zip per platform: WinDiskCleaner.exe (MFC and CRT linked statically, no redistributable needed) and its PDB.
+      - name: Zip binaries
+        run: |
+          mkdir release
+          for platform in x64 x86; do
+            (cd "artifacts/WinDiskCleaner-$platform-Release" && zip -r "$GITHUB_WORKSPACE/release/WinDiskCleaner-$platform.zip" .)
+          done
+
+      # gh creates the tag on the pushed commit and generates notes from the commits since the
+      # previous release.
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$VERSION" release/*.zip
+          --repo "$GITHUB_REPOSITORY"
+          --target "$GITHUB_SHA"
+          --title "WinDiskCleaner $VERSION"
+          --generate-notes
+          --latest
